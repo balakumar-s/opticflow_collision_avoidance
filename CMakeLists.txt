@@ -106,7 +106,7 @@ include_directories(
 
 ## Declare a cpp executable
 # add_executable(opticflow_collision_avoidance_node src/opticflow_collision_avoidance_node.cpp)
-
+add_executable(optic_flow src/optic_flow.cpp)
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(opticflow_collision_avoidance_node opticflow_collision_avoidance_generate_messages_cpp)
@@ -115,7 +115,7 @@ include_directories(
 # target_link_libraries(opticflow_collision_avoidance_node
 #   ${catkin_LIBRARIES}
 # )
-
+target_link_libraries(optic_flow ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############
