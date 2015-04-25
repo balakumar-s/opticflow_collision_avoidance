@@ -37,26 +37,33 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
       return;
     }
     Mat input_image=cv_ptr->image;
-    Mat gray_image;
-    cvtColor(input_image,gray_image,CV_BGR2GRAY);
+    Mat gray_image_1;
+    cvtColor(input_image,gray_image_1,CV_BGR2GRAY);
+    Mat gray_image=Mat(gray_image_1.rows,gray_image_1.cols,CV_8U);
+    gray_image=gray_image_1;
     cv::imshow("grayscale_input",gray_image);
-    cv::waitKey(0);
-    Mat left_image,right_image;
-  for (int j=0;j<gray_image.rows;j++)
+    cv::waitKey(1);
+    Mat left_image=Mat(720,1280/2,CV_8U);
+    Mat right_image=Mat(720,1280/2,CV_8U);
+  for (int i=0;i<gray_image.rows;i++)
   {
-    for(int i=0;i<gray_image.cols;i++)
+    for(int j=0;j<gray_image.cols;j++)
     {
-      if(i<gray_image.cols/2)
+      if(j<gray_image.cols/2)
       {
-        left_image.at<double>(i,j)=gray_image.at<double>(i,j);
+        left_image.at<uchar>(i,j)=gray_image.at<uchar>(i,j);
       }
       else
       {
-        right_image.at<double>(i+1-gray_image.cols/2,j)=gray_image.at<double>(i,j);
+        right_image.at<uchar>(i,j-gray_image.cols/2)=gray_image.at<uchar>(i,j);
       }
     }
    } 
    imshow("left",left_image);
+       cv::waitKey(1);
+
    imshow("right",right_image);
+       cv::waitKey(1);
+
 
 }
