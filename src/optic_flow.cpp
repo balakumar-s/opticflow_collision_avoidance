@@ -4,7 +4,7 @@
 #include <opencv2/objdetect/objdetect.hpp>
 #include <highgui.h>
 #include <cv.h>
-
+#include <opencv2/video/tracking.hpp>
 #include <math.h>
 
 using namespace cv;
@@ -158,8 +158,8 @@ int main()
 		Temp_Space( &temp_space_2, dimensions, IPL_DEPTH_8U, 1 );
 
 		
-		cvCalcOpticalFlowPyrLK(frame1, frame2, temp_space_1, temp_space_2, features_1, features_2, features_count, optical_flow_window, 5, optical_flow_found_feature, error, optical_flow_termination_criteria, 0 );
-		
+		//cvCalcOpticalFlowPyrLK(frame1, frame2, temp_space_1, temp_space_2, features_1, features_2, features_count, optical_flow_window, 5, optical_flow_found_feature, error, optical_flow_termination_criteria, 0 );
+		calcOpticalFlowPyrLK(frame1, frame2, temp_space_1, temp_space_2, features_1, features_2, features_count, optical_flow_window, 5, optical_flow_found_feature, error, optical_flow_termination_criteria, 0 );
 		
                 double x_avg=0,y_avg=0,angle_avg=0;
 
