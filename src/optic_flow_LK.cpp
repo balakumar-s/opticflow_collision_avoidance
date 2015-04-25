@@ -41,6 +41,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
       return;
     }
     //Image is converted to grayscale
+    //TODO remove distortion
     Mat input_image=cv_ptr->image;
     Mat gray_image_1;
     cvtColor(input_image,gray_image_1,CV_BGR2GRAY);

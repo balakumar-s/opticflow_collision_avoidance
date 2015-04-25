@@ -1,3 +1,6 @@
 <launch>
-	<node name="usb_cam_node" pkg="usb_cam" type="usb_cam_node" respawn="false" output="screen" />
+	<node name="usb_cam_node" pkg="usb_cam" type="usb_cam_node" respawn="false" output="screen"/>
+	<node name="optic_flow_LK" pkg="opticflow_collision_avoidance" type="optic_flow_LK" respawn="false" output="screen"/>
+
+
 </launch>
