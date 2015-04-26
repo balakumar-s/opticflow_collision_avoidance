@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
 )
+find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -118,7 +119,8 @@ add_executable(optic_flow_LK src/optic_flow_LK.cpp)
 #   ${catkin_LIBRARIES}
 # )
 #target_link_libraries(optic_flow ${catkin_LIBRARIES} ${OpenCV_LIBS})
-target_link_libraries(optic_flow_LK ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(optic_flow_LK ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
 #############
 ## Install ##
 #############

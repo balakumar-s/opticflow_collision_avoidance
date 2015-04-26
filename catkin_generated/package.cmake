@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "opticflow_collision_avoidance")
+set(opticflow_collision_avoidance_MAINTAINER "bala <bala@todo.todo>")
+set(opticflow_collision_avoidance_DEPRECATED "")
+set(opticflow_collision_avoidance_VERSION "0.0.0")
+set(opticflow_collision_avoidance_BUILD_DEPENDS "cv_bridge" "roscpp" "rospy" "sensor_msgs")
+set(opticflow_collision_avoidance_RUN_DEPENDS "cv_bridge" "roscpp" "rospy" "sensor_msgs")
+set(opticflow_collision_avoidance_BUILDTOOL_DEPENDS "catkin")
