@@ -1,8 +1,0 @@
-prefix=/usr/local
-
-Name: opticflow_collision_avoidance
-Description: Description of opticflow_collision_avoidance
-Version: 0.0.0
-Cflags: 
-Libs: -L/usr/local/lib 
-Requires: 
