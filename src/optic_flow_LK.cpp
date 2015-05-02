@@ -21,7 +21,7 @@ int main(int argc,char** argv)
   cv::namedWindow("grayscale_input");
   cv::namedWindow("left");
   cv::namedWindow("right");
-	ros::Subscriber image_sub=n.subscribe("/usb_cam_node/image_raw",1,imageCallback);
+	ros::Subscriber image_sub=n.subscribe("/usb_cam/image_raw",1,imageCallback);
   left_pub=n.advertise<std_msgs::Float32>("optic/left",1);
   right_pub=n.advertise<std_msgs::Float32>("optic/right",1);
 	ros::spin();
@@ -73,7 +73,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
    imshow("right",right_image);
        cv::waitKey(1);
   // TODO: Implement optic flow method
-
+  //optic_lucas(left_image);
   // Find maximum limit of vectors
 
   // Write float values
