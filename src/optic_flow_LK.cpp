@@ -67,8 +67,8 @@ int main(int argc,char** argv)
 	ros::NodeHandle n;
   cv::namedWindow("grayscale_input");
   cv::namedWindow("left");
-  /*cv::namedWindow("right");
-  cv::namedWindow("x_derivative");
+  cv::namedWindow("right");
+  /*cv::namedWindow("x_derivative");
   cv::namedWindow("y_derivative");
   cv::namedWindow("time_derivative");*/
   cv::namedWindow("left_optic_flow");
@@ -103,29 +103,17 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
     cv::imshow("grayscale_input",gray_image);
     cv::waitKey(1);
     // Image is split into left and right
-    Mat left_image=Mat(gray_image.rows,gray_image.cols/2,CV_8U);
-    Mat right_image=Mat(gray_image.rows,gray_image.cols/2,CV_8U);
-  for (int i=0;i<gray_image.rows;i++)
-  {
-    for(int j=0;j<gray_image.cols;j++)
-    {
-      if(j<gray_image.cols/2)
-      {
-        left_image.at<uchar>(i,j)=gray_image.at<uchar>(i,j);
-      }
-      else
-      {
-        right_image.at<uchar>(i,j-gray_image.cols/2)=gray_image.at<uchar>(i,j);
-      }
-    }
-   } 
+    cv::Rect left_ROI(0, 0, gray_image.cols/2, gray_image.rows);
+    cv::Rect right_ROI(gray_image.cols/2,0, gray_image.cols/2, gray_image.rows);
+    Mat left_image=gray_image(left_ROI);//Mat(gray_image.rows,gray_image.cols/2,CV_8U);
+    Mat right_image=gray_image(right_ROI);//Mat(gray_image.rows,gray_image.cols/2,CV_8U);
    // Left and right images are streamed
-  imshow("left",left_image);
-  cv::waitKey(1);
-  /*
+   imshow("left",left_image);
+   cv::waitKey(1);
+  
    imshow("right",right_image);
-       cv::waitKey(1);
-       */
+   cv::waitKey(1);
+       
   // TODO: Implement optic flow method
   if(count>1)
   {
@@ -166,9 +154,9 @@ void optic_lucas(Mat first_image_in,Mat second_image_in)
   cvtColor(first_image,optic_image, CV_GRAY2RGB);
   int line_thickness=1;
   cv::Scalar line_color=CV_RGB(64, 64, 255);
-  for(int i=n;i<first_image.rows-n;i++)
+  for(int i=n+1;i<first_image.rows-n+1;i++)
   {
-    for(int j=n;j<first_image.cols-n;j++)
+    for(int j=n+1;j<first_image.cols-n+1;j++)
     {
 
       MatrixXd A(2,n*n);
