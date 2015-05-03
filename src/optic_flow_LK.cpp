@@ -19,7 +19,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr&);
 ros::Publisher left_pub,right_pub;
 using namespace cv;
 using namespace Eigen;
-int n=2;
+int n=3;
 int scale=5;
 //std::vector<Point2f> optic_lucas(Mat,Mat);
 //Point2f(float,float) optic_lucas(Mat,Mat);
@@ -96,13 +96,13 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
   // TODO: Implement optic flow method
   if(count>1)
   {
-    int line_thickness=0;
-    cv::Scalar line_color=(94.0, 206.0, 165.0, 0.0);
-  Mat optic_image=left_image;
-  Point2f left_vec[left_image.rows][left_image.cols];
-  MatrixXf left_flow;
-  left_flow=optic_lucas(left_image_prev,left_image);
-  for(int i=n;i<left_image.rows-n;i++)
+    int line_thickness=1;
+    cv::Scalar line_color=CV_RGB(64, 64, 255);
+    Mat optic_image;
+    cvtColor(left_image,optic_image, CV_GRAY2RGB);
+    MatrixXf left_flow;
+    left_flow=optic_lucas(left_image,left_image);
+ /* for(int i=n;i<left_image.rows-n;i++)
   {
     for(int j=n;j<left_image.cols-n;j++)
     {
@@ -114,24 +114,27 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
       double angle;   
       angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
       double hypotenuse;  hypotenuse = sqrt( square(p.y - q.y) + square(p.x - q.x));
-      q.x = (int) (p.x - 3 * hypotenuse * cos(angle));
-      q.y = (int) (p.y - 3 * hypotenuse * sin(angle));
+      //q.x = (int) (p.x - 3 * hypotenuse * cos(angle));
+    //  q.y = (int) (p.y - 3 * hypotenuse * sin(angle));
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );
       /* Now draw the tips of the arrow.  I do some scaling so that the
         * tips look proportional to the main line of the arrow.
         */   
-      p.x = (int) (q.x + 9 * cos(angle + PI / 4));
+     /* p.x = (int) (q.x + 9 * cos(angle + PI / 4));
       p.y = (int) (q.y + 9 * sin(angle + PI / 4));    
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );
       p.x = (int) (q.x + 9 * cos(angle - PI / 4));
       p.y = (int) (q.y + 9 * sin(angle - PI / 4));    
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );
-    }
+      */
+
+  /*  }
   }
+  
   
   imshow("left_optic_flow",optic_image);
   cv::waitKey(1);
-
+  */
   }
   left_image_prev=left_image;
   count++;
@@ -152,8 +155,12 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
 
 //std::vector<Point2f> optic_lucas(Mat first_image,Mat second_image)
 //const Point2f&(float,float) optic_lucas(Mat first_image,Mat second_image)
-MatrixXf optic_lucas(Mat first_image,Mat second_image)
+MatrixXf optic_lucas(Mat first_image_in,Mat second_image_in)
 {
+  Mat first_image;
+  Mat second_image;
+  GaussianBlur(first_image_in,first_image,Size(n,n),0,0);
+  GaussianBlur(second_image_in,second_image,Size(n,n),0,0);
   Mat x_derivative=Mat(first_image.rows,first_image.cols,CV_8U);
   Mat y_derivative=Mat(first_image.rows,first_image.cols,CV_8U);
   Mat time_derivative=Mat(first_image.rows,first_image.cols,CV_8U);
@@ -178,10 +185,13 @@ MatrixXf optic_lucas(Mat first_image,Mat second_image)
   cv::waitKey(1);
   imshow("time_derivative",time_derivative);
   cv::waitKey(1);*/
-  Point2f flow_vectors[first_image.rows][first_image.cols];
+  
   MatrixXf optic_flow_matrix(first_image.rows*2,first_image.cols*2);
   
-
+  Mat optic_image;
+  cvtColor(first_image,optic_image, CV_GRAY2RGB);
+  int line_thickness=1;
+  cv::Scalar line_color=CV_RGB(64, 64, 255);
   for(int i=n;i<first_image.rows-n;i++)
   {
     for(int j=n;j<first_image.cols-n;j++)
@@ -199,30 +209,38 @@ MatrixXf optic_lucas(Mat first_image,Mat second_image)
           A(0,temp_counter)=x_derivative.at<uchar>(i+row_marker,j+col_marker);
           A(1,temp_counter)=y_derivative.at<uchar>(i+row_marker,j+col_marker);
           B(0,temp_counter)=time_derivative.at<uchar>(i+row_marker,j+col_marker);
-          //ROS_INFO("bug detected: %d",temp_counter);
           temp_counter++;
-
         }
       }
       MatrixXf A_transpose=A.transpose();
       MatrixXf B_transpose=B.transpose();
       MatrixXf temp_toinverse=(A*A_transpose);
-      //ROS_INFO("bug detected 2");
       MatrixXf temp_vector= ((temp_toinverse.inverse())*A)*B_transpose;
       
       MatrixXf flow_matrix=-temp_vector;
-     // ROS_INFO("bug detected:%d",flow_matrix.size());
       optic_flow_matrix(i,j)=flow_matrix(0,0);
       optic_flow_matrix(i+first_image.rows-1,j+first_image.cols-1)=flow_matrix(1,0);
-      flow_vectors[i][j].x=flow_matrix(0,0);
-      flow_vectors[i][j].y=flow_matrix(1,0);
+      
+      MatrixXf left_flow=optic_flow_matrix;
+      CvPoint p,q;
+      p.x=i;
+      p.y=j;
+      q.x=left_flow(i,j);
+      q.y=left_flow(i+first_image.rows-1,j+first_image.cols-1);
+      double angle;   
+      angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
+      double hypotenuse;  hypotenuse = sqrt( square(p.y - q.y) + square(p.x - q.x));
+      //q.x = (int) (p.x - 3 * hypotenuse * cos(angle));
+    //  q.y = (int) (p.y - 3 * hypotenuse * sin(angle));
+      line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );    
 
     }
     
   }
-  //std::vector<Point2f> temp;//=flow_vectors;
-  //Point2f t;
- // return t;
+  imshow("left_optic_flow",optic_image);
+  cv::waitKey(1);
+
+
   return optic_flow_matrix;
 }
 float square(float x)
