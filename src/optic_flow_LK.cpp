@@ -21,14 +21,14 @@ using namespace Eigen;
 
 void imageCallback(const sensor_msgs::ImageConstPtr&);
 //MatrixXd pinv(MatrixXd&, double);
-
+void control_function();
 ros::Publisher left_pub,right_pub;
 
-int n=5;
+int n=1;
 int scale=5;
-void optic_lucas(Mat,Mat);
+void optic_lucas(Mat&,Mat&);
 float square(float);
-
+Mat input_image;
 int count=1;
 Mat left_image_prev;
 
@@ -65,6 +65,8 @@ int main(int argc,char** argv)
 {
 	ros::init(argc,argv,"opticflow_LK");
 	ros::NodeHandle n;
+  ros::Rate loop_rate(1); 
+  //Eigen::setNbThreads(8);
   cv::namedWindow("grayscale_input");
   cv::namedWindow("left");
   cv::namedWindow("right");
@@ -75,29 +77,22 @@ int main(int argc,char** argv)
   ros::Subscriber image_sub=n.subscribe("/usb_cam/image_raw",1,imageCallback);
   left_pub=n.advertise<std_msgs::Float32>("optic/left",1);
   right_pub=n.advertise<std_msgs::Float32>("optic/right",1);
-	ros::spin();
+  while (ros::ok())
+  {
+  if(input_image.empty()==0)
+  {
+  control_function();
+  }
+  ros::spinOnce();
+  loop_rate.sleep();
+  }
 	return 0;
 }
-
-void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
+void control_function()
 {
-	  cv_bridge::CvImagePtr cv_ptr;
-    try
-    {
-      cv_ptr = cv_bridge::toCvCopy(im_msg, sensor_msgs::image_encodings::BGR8);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
-    //Image is converted to grayscale
-    //TODO remove distortion
-    Mat input_image=cv_ptr->image;
     Mat gray_image_1;
     cvtColor(input_image,gray_image_1,CV_BGR2GRAY);
     Mat gray_image=Mat(gray_image_1.rows/scale,gray_image_1.cols/scale,CV_8U);
-    //gray_image=gray_image_1;
     resize(gray_image_1,gray_image,gray_image.size());
     // Grayscale image is displayed
     cv::imshow("grayscale_input",gray_image);
@@ -117,16 +112,11 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
   // TODO: Implement optic flow method
   if(count>1)
   {
- //   int line_thickness=1;
-  //  cv::Scalar line_color=CV_RGB(64, 64, 255);
- //   Mat optic_image;
-  //  cvtColor(left_image,optic_image, CV_GRAY2RGB);
-  //  MatrixXd left_flow;
-    optic_lucas(left_image_prev,left_image);
+   // optic_lucas(left_image_prev,left_image);
   }
   left_image_prev=left_image;
   count++;
-  //ROS_INFO("%d",count);
+  ROS_INFO("%d",count);
  
   //Plot vectors:
 
@@ -140,23 +130,40 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
     right_pub.publish(right_);
 
 }
+void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
+{
+	  cv_bridge::CvImagePtr cv_ptr;
+    try
+    {
+      cv_ptr = cv_bridge::toCvCopy(im_msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
+    }
+    //Image is converted to grayscale
+    //TODO remove distortion
+    input_image=cv_ptr->image;
 
-void optic_lucas(Mat first_image_in,Mat second_image_in)
+}
+
+void optic_lucas(Mat& first_image_in,Mat& second_image_in)
 {
   Mat first_image;
   Mat second_image;
   GaussianBlur(first_image_in,first_image,Size(n,n),0,0);
   GaussianBlur(second_image_in,second_image,Size(n,n),0,0);
-  Mat time_derivative=Mat(first_image.rows,first_image.cols,CV_8U);
-  time_derivative=second_image-first_image;
+ // Mat time_derivative=Mat(first_image.rows,first_image.cols,CV_8U);
+ // time_derivative=second_image-first_image;
   
   Mat optic_image;
   cvtColor(first_image,optic_image, CV_GRAY2RGB);
   int line_thickness=1;
   cv::Scalar line_color=CV_RGB(64, 64, 255);
-  for(int i=n+1;i<first_image.rows-n+1;i++)
+  for(int i=n;i<first_image.rows-n;i++)
   {
-    for(int j=n+1;j<first_image.cols-n+1;j++)
+    for(int j=n;j<first_image.cols-n;j++)
     {
 
       MatrixXd A(2,n*n);
@@ -173,15 +180,15 @@ void optic_lucas(Mat first_image_in,Mat second_image_in)
 
           A(0,temp_counter)=x_d;
           A(1,temp_counter)=y_d;
-          B(temp_counter,0)=time_derivative.at<uchar>(i+row_marker,j+col_marker);
+          B(temp_counter,0)=second_image.at<uchar>(i+row_marker,j+col_marker)-first_image.at<uchar>(i+row_marker,j+col_marker);//time_derivative.at<uchar>(i+row_marker,j+col_marker);
           temp_counter++;
         }
       }
-      MatrixXd A_transpose=A.transpose();
-      MatrixXd temp_toinverse=A*A_transpose;
-      MatrixXd temp_vector=pinv(temp_toinverse)*A*B;
+     // MatrixXd A_transpose=A.transpose();
+      MatrixXd flow_matrix=A*A.transpose();
+      flow_matrix=-pinv(flow_matrix)*A*B;
       
-      MatrixXd flow_matrix=-temp_vector;
+      //MatrixXd flow_matrix=-temp_vector;
       CvPoint p,q;
       p.x=i;
       p.y=j;
@@ -192,7 +199,6 @@ void optic_lucas(Mat first_image_in,Mat second_image_in)
       double hypotenuse;  hypotenuse = sqrt( square(p.y - q.y) + square(p.x - q.x));
       q.x = (int) (p.x - 3 * hypotenuse * cos(angle));
       q.y = (int) (p.y - 3 * hypotenuse * sin(angle));
-      //ROS_INFO("px:%d qx:%d",p.x,q.x);
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );    
 
     }
