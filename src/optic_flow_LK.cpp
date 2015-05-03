@@ -13,12 +13,17 @@
 #include <vector>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/LU>
+#include <eigen3/Eigen/SVD>
 
 #define PI 3.14
-void imageCallback(const sensor_msgs::ImageConstPtr&);
-ros::Publisher left_pub,right_pub;
 using namespace cv;
 using namespace Eigen;
+
+void imageCallback(const sensor_msgs::ImageConstPtr&);
+//MatrixXd pinv(MatrixXd&, double);
+
+ros::Publisher left_pub,right_pub;
+
 int n=1;
 int scale=5;
 void optic_lucas(Mat,Mat);
@@ -26,6 +31,36 @@ float square(float);
 
 int count=1;
 Mat left_image_prev;
+
+MatrixXd pinv(MatrixXd& m, double epsilon = 1E-9) 
+{
+  //         ei_assert(m_isInitialized && "SVD is not initialized.");
+  //         double  pinvtoler=1.e-6; // choose your tolerance widely!
+  //         SingularValuesType m_sigma_inv=m_sigma;
+  //         for ( long i=0; i<m_workMatrix.cols(); ++i) {
+  //            if ( m_sigma(i) > pinvtoler )
+  //               m_sigma_inv(i)=1.0/m_sigma(i);
+  //           else m_sigma_inv(i)=0;
+  //         }
+  //         pinvmat= (m_matV*m_sigma_inv.asDiagonal()*m_matU.transpose());
+  typedef JacobiSVD<MatrixXd> SVD;
+  SVD svd(m, ComputeFullU | ComputeFullV);
+  typedef SVD::SingularValuesType SingularValuesType;
+  const SingularValuesType singVals = svd.singularValues();
+  SingularValuesType invSingVals = singVals;
+  for(int i=0; i<singVals.rows(); i++) {
+    if(singVals(i) <= epsilon) {
+      invSingVals(i) = 0.0; // FIXED can not be safely inverted
+    }
+    else {
+      invSingVals(i) = 1.0 / invSingVals(i);
+    }
+  }
+  return MatrixXd(svd.matrixV() *
+      invSingVals.asDiagonal() *
+      svd.matrixU().transpose());
+}
+
 int main(int argc,char** argv)
 {
 	ros::init(argc,argv,"opticflow_LK");
@@ -155,8 +190,8 @@ void optic_lucas(Mat first_image_in,Mat second_image_in)
         }
       }
       MatrixXd A_transpose=A.transpose();
-      MatrixXd temp_toinverse=(A*A_transpose);
-      MatrixXd temp_vector=((temp_toinverse.inverse())*A)*B;
+      MatrixXd temp_toinverse=A*A_transpose;
+      MatrixXd temp_vector=pinv(temp_toinverse)*A*B;
       
       MatrixXd flow_matrix=-temp_vector;
       CvPoint p,q;
@@ -164,11 +199,11 @@ void optic_lucas(Mat first_image_in,Mat second_image_in)
       p.y=j;
       q.x=flow_matrix(0,0);
       q.y=flow_matrix(1,0);
-     // double angle;   
-     // angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
-     // double hypotenuse;  hypotenuse = sqrt( square(p.y - q.y) + square(p.x - q.x));
-      //q.x = (int) (p.x - 3 * hypotenuse * cos(angle));
-    //  q.y = (int) (p.y - 3 * hypotenuse * sin(angle));
+      double angle;   
+      angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
+      double hypotenuse;  hypotenuse = sqrt( square(p.y - q.y) + square(p.x - q.x));
+      q.x = (int) (p.x - 3 * hypotenuse * cos(angle));
+      q.y = (int) (p.y - 3 * hypotenuse * sin(angle));
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );    
 
     }
