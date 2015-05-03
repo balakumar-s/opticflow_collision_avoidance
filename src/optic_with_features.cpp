@@ -22,8 +22,8 @@ using namespace Eigen;
 void imageCallback(const sensor_msgs::ImageConstPtr&);
 //MatrixXd pinv(MatrixXd&, double);
 void control_function();
-ros::Publisher left_pub,right_pub,left_image,right_image;
-float vec_threshold=75;
+ros::Publisher left_pub,right_pub,left_image_pub,right_image_pub;
+float vec_threshold=50;
 int n=11;
 int scale=2;
 int optic_lucas(Mat,Mat,ros::Publisher);
@@ -62,7 +62,8 @@ int main(int argc,char** argv)
 //  cv::namedWindow("left_optic_flow");
 //  cv::namedWindow("right_optic_flow");
   ros::Subscriber image_sub=n.subscribe("/usb_cam/image_raw",1,imageCallback);
-  left_image=n.advertise<sensor_msgs::Image>("flow/left",1);
+  left_image_pub=n.advertise<sensor_msgs::Image>("flow/left",1);
+  right_image_pub=n.advertise<sensor_msgs::Image>("flow/right",1);
   left_pub=n.advertise<std_msgs::Float32>("optic/left",1);
   right_pub=n.advertise<std_msgs::Float32>("optic/right",1);
   while (ros::ok())
@@ -104,8 +105,8 @@ void control_function()
   int right_obs=0;
   if(count>1)
   {
-    left_obs=optic_lucas(left_image_prev,left_image,left_pub);
-    right_obs=optic_lucas(right_image_prev,right_image,right_pub);
+    left_obs=optic_lucas(left_image_prev,left_image,left_image_pub);
+    right_obs=optic_lucas(right_image_prev,right_image,right_image_pub);
   }
   left_image_prev=left_image;
   right_image_prev=right_image;
