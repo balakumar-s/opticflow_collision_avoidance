@@ -22,16 +22,17 @@ using namespace Eigen;
 void imageCallback(const sensor_msgs::ImageConstPtr&);
 //MatrixXd pinv(MatrixXd&, double);
 void control_function();
-ros::Publisher left_pub,right_pub;
+ros::Publisher left_pub,right_pub,left_image,right_image;
 float vec_threshold=75;
 int n=11;
 int scale=2;
-int optic_lucas(Mat,Mat,string);
+int optic_lucas(Mat,Mat,ros::Publisher);
 float square(float);
 Mat input_image;
 int count=1;
 Mat left_image_prev;
 Mat right_image_prev;
+sensor_msgs::Image image_temp;
 
 MatrixXd pinv(MatrixXd& m, double epsilon = 1E-9) 
 {
@@ -57,10 +58,11 @@ int main(int argc,char** argv)
 {
 	ros::init(argc,argv,"opticflow_LK");
 	ros::NodeHandle n;
-  ros::Rate loop_rate(15); 
-  cv::namedWindow("left_optic_flow");
-  cv::namedWindow("right_optic_flow");
+        ros::Rate loop_rate(15); 
+//  cv::namedWindow("left_optic_flow");
+//  cv::namedWindow("right_optic_flow");
   ros::Subscriber image_sub=n.subscribe("/usb_cam/image_raw",1,imageCallback);
+  left_image=n.advertise<sensor_msgs::Image>("flow/left",1);
   left_pub=n.advertise<std_msgs::Float32>("optic/left",1);
   right_pub=n.advertise<std_msgs::Float32>("optic/right",1);
   while (ros::ok())
@@ -102,8 +104,8 @@ void control_function()
   int right_obs=0;
   if(count>1)
   {
-    left_obs=optic_lucas(left_image_prev,left_image,"left_optic_flow");
-    right_obs=optic_lucas(right_image_prev,right_image,"right_optic_flow");
+    left_obs=optic_lucas(left_image_prev,left_image,left_pub);
+    right_obs=optic_lucas(right_image_prev,right_image,right_pub);
   }
   left_image_prev=left_image;
   right_image_prev=right_image;
@@ -123,10 +125,12 @@ void control_function()
 }
 void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
 {
+         image_temp.header=im_msg->header;
 	  cv_bridge::CvImagePtr cv_ptr;
     try
     {
       cv_ptr = cv_bridge::toCvCopy(im_msg, sensor_msgs::image_encodings::BGR8);
+      
     }
     catch (cv_bridge::Exception& e)
     {
@@ -140,7 +144,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
 
 }
 
-int optic_lucas(Mat first_image_in,Mat second_image_in,string window_name)
+int optic_lucas(Mat first_image_in,Mat second_image_in,ros::Publisher name_pub)
 {
   Mat first_image;
   Mat second_image;
@@ -202,12 +206,17 @@ int optic_lucas(Mat first_image_in,Mat second_image_in,string window_name)
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );
       obstacles++;
       }
-
+ 
    
     
   }
   if(optic_image.empty()==0)
   {
+   cv_bridge::CvImage cv_ptr;
+   cv_ptr.header=image_temp.header;
+   cv_ptr.encoding=sensor_msgs::image_encodings::BGR8;
+   cv_ptr.image=optic_image;
+  name_pub.publish(cv_ptr.toImageMsg());
  // imshow(window_name,optic_image);
   //cv::waitKey(1);
   }
