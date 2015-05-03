@@ -23,26 +23,17 @@ void imageCallback(const sensor_msgs::ImageConstPtr&);
 //MatrixXd pinv(MatrixXd&, double);
 void control_function();
 ros::Publisher left_pub,right_pub;
-
+float vec_threshold=75;
 int n=11;
-int scale=1;
-void optic_lucas(Mat&,Mat&);
+int scale=2;
+int optic_lucas(Mat&,Mat&,string);
 float square(float);
 Mat input_image;
 int count=1;
 Mat left_image_prev;
-
+Mat right_image_prev;
 MatrixXd pinv(MatrixXd& m, double epsilon = 1E-9) 
 {
-  //         ei_assert(m_isInitialized && "SVD is not initialized.");
-  //         double  pinvtoler=1.e-6; // choose your tolerance widely!
-  //         SingularValuesType m_sigma_inv=m_sigma;
-  //         for ( long i=0; i<m_workMatrix.cols(); ++i) {
-  //            if ( m_sigma(i) > pinvtoler )
-  //               m_sigma_inv(i)=1.0/m_sigma(i);
-  //           else m_sigma_inv(i)=0;
-  //         }
-  //         pinvmat= (m_matV*m_sigma_inv.asDiagonal()*m_matU.transpose());
   typedef JacobiSVD<MatrixXd> SVD;
   SVD svd(m, ComputeFullU | ComputeFullV);
   typedef SVD::SingularValuesType SingularValuesType;
@@ -65,15 +56,9 @@ int main(int argc,char** argv)
 {
 	ros::init(argc,argv,"opticflow_LK");
 	ros::NodeHandle n;
-  ros::Rate loop_rate(30); 
-  //Eigen::setNbThreads(8);
-  cv::namedWindow("grayscale_input");
-  cv::namedWindow("left");
-  cv::namedWindow("right");
-  /*cv::namedWindow("x_derivative");
-  cv::namedWindow("y_derivative");
-  cv::namedWindow("time_derivative");*/
+  ros::Rate loop_rate(15); 
   cv::namedWindow("left_optic_flow");
+  cv::namedWindow("right_optic_flow");
   ros::Subscriber image_sub=n.subscribe("/usb_cam/image_raw",1,imageCallback);
   left_pub=n.advertise<std_msgs::Float32>("optic/left",1);
   right_pub=n.advertise<std_msgs::Float32>("optic/right",1);
@@ -94,38 +79,43 @@ void control_function()
     cvtColor(input_image,gray_image_1,CV_BGR2GRAY);
     Mat gray_image=Mat(gray_image_1.rows/scale,gray_image_1.cols/scale,CV_8U);
     resize(gray_image_1,gray_image,gray_image.size());
+  
     // Grayscale image is displayed
-    cv::imshow("grayscale_input",gray_image);
-    cv::waitKey(1);
+   // cv::imshow("grayscale_input",gray_image);
+  //  cv::waitKey(1);
+  
     // Image is split into left and right
     cv::Rect left_ROI(0, 0, gray_image.cols/2, gray_image.rows);
     cv::Rect right_ROI(gray_image.cols/2,0, gray_image.cols/2, gray_image.rows);
     Mat left_image=gray_image(left_ROI);//Mat(gray_image.rows,gray_image.cols/2,CV_8U);
     Mat right_image=gray_image(right_ROI);//Mat(gray_image.rows,gray_image.cols/2,CV_8U);
    // Left and right images are streamed
-   imshow("left",left_image);
-   cv::waitKey(1);
+ //  imshow("left",left_image);
+ //  cv::waitKey(1);
   
-   imshow("right",right_image);
-   cv::waitKey(1);
+ //  imshow("right",right_image);
+//   cv::waitKey(1);
        
-  // TODO: Implement optic flow method
+  // Implement optic flow method
+  int left_obs=0;
+  int right_obs=0;
   if(count>1)
   {
-    optic_lucas(left_image_prev,left_image);
+    left_obs=optic_lucas(left_image_prev,left_image,"left_optic_flow");
+    right_obs=optic_lucas(right_image_prev,right_image,"right_optic_flow");
   }
   left_image_prev=left_image;
+  right_image_prev=right_image;
   count++;
-  //ROS_INFO("%d",count);
+  
  
-  //Plot vectors:
 
   // Find maximum limit of vectors
 
   // Write float values
     std_msgs::Float32 left_,right_;
-    left_.data=1;
-    right_.data=1;
+    left_.data=left_obs;
+    right_.data=right_obs;
     left_pub.publish(left_);
     right_pub.publish(right_);
 
@@ -143,18 +133,19 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
       return;
     }
     //Image is converted to grayscale
+  
     //TODO remove distortion
     input_image=cv_ptr->image;
 
 }
 
-void optic_lucas(Mat& first_image_in,Mat& second_image_in)
+int optic_lucas(Mat& first_image_in,Mat& second_image_in,string window_name)
 {
   Mat first_image;
   Mat second_image;
   GaussianBlur(first_image_in,first_image,Size(n,n),0,0);
   GaussianBlur(second_image_in,second_image,Size(n,n),0,0);
-  
+  int obstacles=0;
   Mat optic_image;
   cvtColor(first_image,optic_image, CV_GRAY2RGB);
   int line_thickness=1;
@@ -185,13 +176,12 @@ void optic_lucas(Mat& first_image_in,Mat& second_image_in)
           temp_counter++;
         }
       }
-     // MatrixXd A_transpose=A.transpose();
+     
       MatrixXd flow_matrix=A*A.transpose();
       flow_matrix=pinv(flow_matrix)*A*B;
       int force=abs(flow_matrix(0,0))+abs(flow_matrix(1,0));
-      if(force>10/scale)
+      if(force>vec_threshold/scale)
       {
-      //MatrixXd flow_matrix=-temp_vector;
       CvPoint p,q;
       p.y=i;
       p.x=j;
@@ -209,16 +199,16 @@ void optic_lucas(Mat& first_image_in,Mat& second_image_in)
       p.x = (int) (q.x + 9 * cos(angle - PI / 4));
       p.y = (int) (q.y + 9 * sin(angle - PI / 4));    
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );
+      obstacles++;
       }
 
    
     
   }
-  imshow("left_optic_flow",optic_image);
+  imshow(window_name,optic_image);
   cv::waitKey(1);
+  return obstacles;
 
-
-  //return optic_flow_matrix;
 }
 float square(float x)
 {
