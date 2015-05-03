@@ -26,12 +26,13 @@ ros::Publisher left_pub,right_pub;
 float vec_threshold=75;
 int n=11;
 int scale=2;
-int optic_lucas(Mat&,Mat&,string);
+int optic_lucas(Mat,Mat,string);
 float square(float);
 Mat input_image;
 int count=1;
 Mat left_image_prev;
 Mat right_image_prev;
+
 MatrixXd pinv(MatrixXd& m, double epsilon = 1E-9) 
 {
   typedef JacobiSVD<MatrixXd> SVD;
@@ -139,7 +140,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
 
 }
 
-int optic_lucas(Mat& first_image_in,Mat& second_image_in,string window_name)
+int optic_lucas(Mat first_image_in,Mat second_image_in,string window_name)
 {
   Mat first_image;
   Mat second_image;
@@ -205,8 +206,11 @@ int optic_lucas(Mat& first_image_in,Mat& second_image_in,string window_name)
    
     
   }
-  imshow(window_name,optic_image);
-  cv::waitKey(1);
+  if(optic_image.empty()==0)
+  {
+ // imshow(window_name,optic_image);
+  //cv::waitKey(1);
+  }
   return obstacles;
 
 }
