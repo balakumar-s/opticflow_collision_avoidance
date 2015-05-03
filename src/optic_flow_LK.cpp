@@ -24,8 +24,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr&);
 void control_function();
 ros::Publisher left_pub,right_pub;
 
-int n=1;
-int scale=5;
+int n=21;
+int scale=3;
 void optic_lucas(Mat&,Mat&);
 float square(float);
 Mat input_image;
@@ -65,7 +65,7 @@ int main(int argc,char** argv)
 {
 	ros::init(argc,argv,"opticflow_LK");
 	ros::NodeHandle n;
-  ros::Rate loop_rate(1); 
+  ros::Rate loop_rate(30); 
   //Eigen::setNbThreads(8);
   cv::namedWindow("grayscale_input");
   cv::namedWindow("left");
@@ -112,11 +112,11 @@ void control_function()
   // TODO: Implement optic flow method
   if(count>1)
   {
-   // optic_lucas(left_image_prev,left_image);
+    optic_lucas(left_image_prev,left_image);
   }
   left_image_prev=left_image;
   count++;
-  ROS_INFO("%d",count);
+  //ROS_INFO("%d",count);
  
   //Plot vectors:
 
@@ -187,19 +187,28 @@ void optic_lucas(Mat& first_image_in,Mat& second_image_in)
      // MatrixXd A_transpose=A.transpose();
       MatrixXd flow_matrix=A*A.transpose();
       flow_matrix=-pinv(flow_matrix)*A*B;
-      
+      int force=abs(flow_matrix(0,0))+abs(flow_matrix(1,0));
+      if(force>100/scale)
+      {
       //MatrixXd flow_matrix=-temp_vector;
       CvPoint p,q;
-      p.x=i;
-      p.y=j;
-      q.x=flow_matrix(0,0)+i;
-      q.y=flow_matrix(1,0)+j;
+      p.y=i;
+      p.x=j;
+      q.y=flow_matrix(0,0)+i;
+      q.x=flow_matrix(1,0)+j;
       double angle;   
       angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
       double hypotenuse;  hypotenuse = sqrt( square(p.y - q.y) + square(p.x - q.x));
       q.x = (int) (p.x - 3 * hypotenuse * cos(angle));
       q.y = (int) (p.y - 3 * hypotenuse * sin(angle));
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );    
+      p.x = (int) (q.x + 9 * cos(angle + PI / 4));
+      p.y = (int) (q.y + 9 * sin(angle + PI / 4));    
+      line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );
+      p.x = (int) (q.x + 9 * cos(angle - PI / 4));
+      p.y = (int) (q.y + 9 * sin(angle - PI / 4));    
+      line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );
+      }
 
     }
     
