@@ -19,7 +19,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr&);
 ros::Publisher left_pub,right_pub;
 using namespace cv;
 using namespace Eigen;
-int n=5;
+int n=3;
 //std::vector<Point2f> optic_lucas(Mat,Mat);
 //Point2f(float,float) optic_lucas(Mat,Mat);
 MatrixXf optic_lucas(Mat,Mat);
@@ -175,24 +175,33 @@ MatrixXf optic_lucas(Mat first_image,Mat second_image)
   cv::waitKey(1);
   Point2f flow_vectors[first_image.rows][first_image.cols];
   MatrixXf optic_flow_matrix(first_image.rows*2,first_image.cols*2);
+  
+
   for(int i=n;i<first_image.rows-n;i++)
   {
     for(int j=n;j<first_image.cols-n;j++)
     {
-      MatrixXf A(n,n);
-      MatrixXf B(1,n);
+
+      MatrixXf A(2,n*n);
+      MatrixXf B(1,n*n);
+      int temp_counter=0;
       for(int k=0;k<n;k++)
       {
         int row_marker=k-1;
         for(int l=0;l<n;l++)
         {
           int col_marker=l-1;
-          A(0,l+k)=x_derivative.at<uchar>(i+row_marker,j+col_marker);
-          A(1,l+k)=y_derivative.at<uchar>(i+row_marker,j+col_marker);
-          B(0,l+k)=time_derivative.at<uchar>(i+row_marker,j+col_marker);
+          A(0,temp_counter)=x_derivative.at<uchar>(i+row_marker,j+col_marker);
+          A(1,temp_counter)=y_derivative.at<uchar>(i+row_marker,j+col_marker);
+          B(0,temp_counter)=time_derivative.at<uchar>(i+row_marker,j+col_marker);
+          //ROS_INFO("bug detected: %d",temp_counter);
+          temp_counter++;
+
         }
       }
-      MatrixXf temp_vector= (A.transpose()*A)*A.transpose()*B.transpose();
+      MatrixXf A_transpose=A.transpose();
+      MatrixXf temp_vector= ((A_transpose*A)*A_transpose)*B.transpose();
+      ROS_INFO("bug detected 1");
       MatrixXf flow_matrix=-temp_vector.inverse();
       optic_flow_matrix(i,j)=flow_matrix(0,0);
       optic_flow_matrix(i+first_image.rows-1,j+first_image.cols-1)=flow_matrix(0,1);
