@@ -24,8 +24,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr&);
 void control_function();
 ros::Publisher left_pub,right_pub;
 
-int n=21;
-int scale=3;
+int n=11;
+int scale=1;
 void optic_lucas(Mat&,Mat&);
 float square(float);
 Mat input_image;
@@ -154,24 +154,24 @@ void optic_lucas(Mat& first_image_in,Mat& second_image_in)
   Mat second_image;
   GaussianBlur(first_image_in,first_image,Size(n,n),0,0);
   GaussianBlur(second_image_in,second_image,Size(n,n),0,0);
- // Mat time_derivative=Mat(first_image.rows,first_image.cols,CV_8U);
- // time_derivative=second_image-first_image;
   
   Mat optic_image;
   cvtColor(first_image,optic_image, CV_GRAY2RGB);
   int line_thickness=1;
   cv::Scalar line_color=CV_RGB(64, 64, 255);
-  
-  for(int i=n;i<first_image.rows-n;i++)
-  {
-    for(int j=n;j<first_image.cols-n;j++)
+  int maxCorners=50;
+  std::vector<cv::Point2f> corners; 
+  corners.reserve(maxCorners);
+  goodFeaturesToTrack(first_image,corners,maxCorners,0.01,5);
+ for(int feature_num=0;feature_num<maxCorners;feature_num++)
+ {
+    int i=corners[feature_num].x;
+    int j=corners[feature_num].y;
+    MatrixXd A(2,n*n);
+    MatrixXd B(n*n,1);
+    int temp_counter=0;
+    for(int k=0;k<n;k++)
     {
-
-      MatrixXd A(2,n*n);
-      MatrixXd B(n*n,1);
-      int temp_counter=0;
-      for(int k=0;k<n;k++)
-      {
         int row_marker=k-1;
         for(int l=0;l<n;l++)
         {
@@ -187,9 +187,9 @@ void optic_lucas(Mat& first_image_in,Mat& second_image_in)
       }
      // MatrixXd A_transpose=A.transpose();
       MatrixXd flow_matrix=A*A.transpose();
-      flow_matrix=-pinv(flow_matrix)*A*B;
+      flow_matrix=pinv(flow_matrix)*A*B;
       int force=abs(flow_matrix(0,0))+abs(flow_matrix(1,0));
-      if(force>100/scale)
+      if(force>10/scale)
       {
       //MatrixXd flow_matrix=-temp_vector;
       CvPoint p,q;
@@ -211,7 +211,7 @@ void optic_lucas(Mat& first_image_in,Mat& second_image_in)
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );
       }
 
-    }
+   
     
   }
   imshow("left_optic_flow",optic_image);

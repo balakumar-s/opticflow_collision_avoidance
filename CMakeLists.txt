@@ -110,6 +110,7 @@ include_directories(
 #add_executable(optic_flow src/optic_flow.cpp)
 
 add_executable(optic_flow_LK src/optic_flow_LK.cpp)
+add_executable(optic_with_features src/optic_with_features.cpp)
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(opticflow_collision_avoidance_node opticflow_collision_avoidance_generate_messages_cpp)
@@ -120,7 +121,7 @@ add_executable(optic_flow_LK src/optic_flow_LK.cpp)
 # )
 #target_link_libraries(optic_flow ${catkin_LIBRARIES} ${OpenCV_LIBS})
 target_link_libraries(optic_flow_LK ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-
+target_link_libraries(optic_with_features ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #############
 ## Install ##
 #############
