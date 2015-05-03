@@ -117,16 +117,16 @@ void imageCallback(const sensor_msgs::ImageConstPtr& im_msg)
   // TODO: Implement optic flow method
   if(count>1)
   {
-    int line_thickness=1;
-    cv::Scalar line_color=CV_RGB(64, 64, 255);
-    Mat optic_image;
-    cvtColor(left_image,optic_image, CV_GRAY2RGB);
-    MatrixXd left_flow;
-    optic_lucas(left_image,left_image);
+ //   int line_thickness=1;
+  //  cv::Scalar line_color=CV_RGB(64, 64, 255);
+ //   Mat optic_image;
+  //  cvtColor(left_image,optic_image, CV_GRAY2RGB);
+  //  MatrixXd left_flow;
+    optic_lucas(left_image_prev,left_image);
   }
   left_image_prev=left_image;
   count++;
-  ROS_INFO("%d",count);
+  //ROS_INFO("%d",count);
  
   //Plot vectors:
 
@@ -185,13 +185,14 @@ void optic_lucas(Mat first_image_in,Mat second_image_in)
       CvPoint p,q;
       p.x=i;
       p.y=j;
-      q.x=flow_matrix(0,0);
-      q.y=flow_matrix(1,0);
+      q.x=flow_matrix(0,0)+i;
+      q.y=flow_matrix(1,0)+j;
       double angle;   
       angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
       double hypotenuse;  hypotenuse = sqrt( square(p.y - q.y) + square(p.x - q.x));
       q.x = (int) (p.x - 3 * hypotenuse * cos(angle));
       q.y = (int) (p.y - 3 * hypotenuse * sin(angle));
+      //ROS_INFO("px:%d qx:%d",p.x,q.x);
       line( optic_image, p, q, line_color, line_thickness, CV_AA, 0 );    
 
     }
