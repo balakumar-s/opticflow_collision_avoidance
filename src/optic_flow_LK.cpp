@@ -24,7 +24,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr&);
 
 ros::Publisher left_pub,right_pub;
 
-int n=1;
+int n=5;
 int scale=5;
 void optic_lucas(Mat,Mat);
 float square(float);
@@ -160,7 +160,7 @@ void optic_lucas(Mat first_image_in,Mat second_image_in)
     {
 
       MatrixXd A(2,n*n);
-      MatrixXd B(1,n*n);
+      MatrixXd B(n*n,1);
       int temp_counter=0;
       for(int k=0;k<n;k++)
       {
